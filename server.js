@@ -76,13 +76,20 @@ function extractAndStoreInfo(sender_psid, message) {
       email: null,
       attempts: 0,
       greeted: false,
+      linkSent: false,
     };
   }
   const session = sessions[sender_psid];
 
+  // Normalize Vietnamese input
+  const normalized = message
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
   const emailMatch = message.match(/[\w._%+-]+@[\w.-]+\.[a-zA-Z]{2,}/);
   const phoneMatch = message.match(/\b\d{9,}\b/);
-  const nameMatch = message.match(/tên(?:\s+tôi|\s+em|\s+là)?\s+(.*?)\b/i);
+  const nameMatch = normalized.match(/ten(?:\s+tôi|\s+em|\s+la)?\s+(.*?)\b/i);
 
   if (!session.email && emailMatch) session.email = emailMatch[0];
   if (!session.phone && phoneMatch) session.phone = phoneMatch[0];
@@ -158,12 +165,21 @@ async function handleUserMessage(sender_psid, userMessage) {
       );
     }
   } else {
-    sendMessage(
-      sender_psid,
-      `Cảm ơn bạn đã cung cấp đầy đủ thông tin! Bạn có thể đặt lịch tư vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1 ✨`
-    );
+    if (!session.linkSent) {
+      sendMessage(
+        sender_psid,
+        `Cảm ơn bạn đã cung cấp đầy đủ thông tin! Bạn có thể đặt lịch tư vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1 ✨`
+      );
+      session.linkSent = true;
+    } else {
+      sendMessage(
+        sender_psid,
+        "Cảm ơn bạn! Nếu bạn có thêm câu hỏi, vui lòng ghi chú lại để đội ngũ cố vấn sẽ giải đáp chi tiết trong buổi hẹn. Hẹn gặp bạn sớm! 🤝"
+      );
+    }
   }
 }
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+

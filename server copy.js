@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const request = require("request");
+const axios = require("axios");
 
 const app = express();
 app.use(bodyParser.json());
@@ -8,36 +9,31 @@ app.use(bodyParser.json());
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+const sessions = {}; // session memory by sender_psid
+
 app.get("/", (req, res) => {
   res.send("Bui Immigration Chatbot Running on Heroku!");
 });
 
-// Facebook Webhook Verification
 app.get("/webhook", (req, res) => {
   const VERIFY_TOKEN = "buiimmigration";
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
 
-  let mode = req.query["hub.mode"];
-  let token = req.query["hub.verify_token"];
-  let challenge = req.query["hub.challenge"];
-
-  if (mode && token) {
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
-      res.status(200).send(challenge);
-    } else {
-      res.sendStatus(403);
-    }
+  if (mode && token && mode === "subscribe" && token === VERIFY_TOKEN) {
+    res.status(200).send(challenge);
+  } else {
+    res.sendStatus(403);
   }
 });
 
-// Webhook Event Receiver
 app.post("/webhook", (req, res) => {
-  let body = req.body;
-
+  const body = req.body;
   if (body.object === "page") {
     body.entry.forEach(function (entry) {
-      let webhook_event = entry.messaging[0];
-      let sender_psid = webhook_event.sender.id;
-
+      const webhook_event = entry.messaging[0];
+      const sender_psid = webhook_event.sender.id;
       if (webhook_event.message && webhook_event.message.text) {
         const userMessage = webhook_event.message.text;
         handleUserMessage(sender_psid, userMessage);
@@ -49,7 +45,6 @@ app.post("/webhook", (req, res) => {
   }
 });
 
-// Send message to user
 function sendMessage(sender_psid, responseText) {
   const request_body = {
     recipient: { id: sender_psid },
@@ -63,53 +58,111 @@ function sendMessage(sender_psid, responseText) {
       method: "POST",
       json: request_body,
     },
-    (err, res, body) => {
-      if (!err) {
-        console.log("Message sent!");
-      } else {
+    (err) => {
+      if (err) {
         console.error("Unable to send message:", err);
+      } else {
+        console.log("Message sent!");
       }
     }
   );
 }
 
-// Handle User Message using OpenAI
-function handleUserMessage(sender_psid, userMessage) {
-  const options = {
-    method: "POST",
-    uri: "https://api.openai.com/v1/chat/completions",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: {
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: `
-                    Bạn là một trợ lý ảo thông minh, thân thiện và chuyên nghiệp, làm việc cho Bùi Immigration. Bạn trả lời tin nhắn khách hàng trên Facebook Messenger. Luôn trả lời và giao tiếp bằng tiếng Việt . Nếu khách nhắn bằng tiếng Anh, bạn có thể trả lời lại bằng tiếng Anh. Nếu không hiểu nội dung khách nhắn, hãy lịch sự hỏi lại để xác nhận thông tin.\n\nBạn KHÔNG bao giờ đưa ra lời khuyên pháp lý, không đánh giá đủ điều kiện, không phân tích chiến lược di trú. Nhiệm vụ của bạn là đặt các câu hỏi hợp lý để tìm hiểu rõ vấn đề di trú mà khách hàng gặp phải và thu thập thông tin liên hệ (họ tên, số điện thoại, email) để hẹn gặp cố vấn.\n\nLuôn tuân thủ theo quy trình sau:\n\n📍**BƯỚC 1 – HỎI THĂM VẤN ĐỀ:**\nBắt đầu bằng cách hỏi mở, nhẹ nhàng để hiểu rõ vấn đề di trú mà khách đang gặp phải. Nếu khách nói “em bị từ chối”, hãy hỏi thêm “bạn còn giữ thư từ chối không, hoặc nhớ lý do họ ghi không?”. Nếu họ nói muốn bảo lãnh, hỏi “bạn là công dân hay thường trú nhân? Người được bảo lãnh đang ở đâu ạ?” Hỏi linh hoạt theo nội dung họ chia sẻ như cố vấn di trú thực thụ.\n\n📍**BƯỚC 2 – THU THẬP THÔNG TIN LIÊN HỆ:**\nKhi đã hiểu rõ vấn đề của khách, bạn mới bắt đầu xin thông tin liên hệ: họ tên, số điện thoại, email. Nếu khách đã cung cấp một phần, chỉ hỏi những phần còn thiếu và luôn xác nhận những gì bạn đã ghi nhận được.\n\n📍**BƯỚC 3 – GỬI LINK ĐẶT LỊCH:**\nKhi đã có đầy đủ thông tin về:\n- Vấn đề di trú mà khách đang gặp\n- Họ tên, số điện thoại, email\n\n→ Lúc đó, bạn mới được gửi link đặt lịch tư vấn: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1\n\n📍* TRƯỜNG HỢP KHẨN CẤP:**\nNếu khách nói là “khẩn cấp” nhưng chưa chia sẻ vấn đề hoặc thông tin liên hệ, hãy cảm thông và hướng dẫn khách gọi số điện thoại: +1 647-281-0808. Nếu họ đã cung cấp thông tin, tiếp tục theo quy trình bình thường.\n\n📍**QUY TẮC KHÁC:**\n- Không hỏi lặp lại nếu khách đã trả lời các câu hỏi. Ghi nhận và xác nhận lại thông tin.\n- Luôn trả lời bằng văn phong nhẹ nhàng, dễ hiểu, có cảm xúc như người thật, không như robot.\n- Sau 24 giờ, gửi tin nhắn nhắc lại hỏi khách đã đặt lịch chưa hoặc đã được ai trong đội ngũ hỗ trợ chưa.\n\nBạn là trợ lý intake, không phải cố vấn pháp lý. Nhiệm vụ của bạn là hỗ trợ khách hàng dễ dàng chia sẻ thông tin, cảm thấy được lắng nghe, và hướng đến cuộc hẹn với chuyên viên di trú.
-                `,
-        },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.5,
-    },
-    json: true,
-  };
+function extractAndStoreInfo(sender_psid, message) {
+  if (!sessions[sender_psid]) {
+    sessions[sender_psid] = {
+      name: null,
+      phone: null,
+      email: null,
+      attempts: 0,
+      greeted: false,
+    };
+  }
+  const session = sessions[sender_psid];
 
-  request(options, (error, response, body) => {
-    if (!error && response.statusCode === 200) {
-      const reply = body.choices[0].message.content.trim();
-      sendMessage(sender_psid, reply);
-    } else {
-      console.error("OpenAI API Error", error || body);
+  const emailMatch = message.match(/[\w._%+-]+@[\w.-]+\.[a-zA-Z]{2,}/);
+  const phoneMatch = message.match(/\b\d{9,}\b/);
+  const nameMatch = message.match(/tên(?:\s+tôi|\s+em|\s+là)?\s+(.*?)\b/i);
+
+  if (!session.email && emailMatch) session.email = emailMatch[0];
+  if (!session.phone && phoneMatch) session.phone = phoneMatch[0];
+  if (!session.name && nameMatch) session.name = nameMatch[1];
+
+  return session;
+}
+
+async function handleUserMessage(sender_psid, userMessage) {
+  const session = extractAndStoreInfo(sender_psid, userMessage);
+
+  // First message: Check if it's a greeting using GPT
+  if (!session.greeted) {
+    try {
+      const response = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content:
+                "Is the following message just a greeting? Reply only 'yes' or 'no'.",
+            },
+            { role: "user", content: userMessage },
+          ],
+          temperature: 0,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const isGreeting =
+        response.data.choices[0].message.content.trim().toLowerCase() === "yes";
+      session.greeted = true;
+
+      if (isGreeting) {
+        sendMessage(
+          sender_psid,
+          "Chào bạn! Rất vui được hỗ trợ bạn về di trú Canada. ✨"
+        );
+        return;
+      }
+    } catch (err) {
+      console.error("Greeting check failed:", err);
+    }
+  }
+
+  // Ask for missing contact info
+  const missing = [];
+  if (!session.name) missing.push("họ tên");
+  if (!session.phone) missing.push("số điện thoại");
+  if (!session.email) missing.push("email");
+
+  if (missing.length > 0) {
+    session.attempts += 1;
+
+    if (session.attempts <= 2) {
       sendMessage(
         sender_psid,
-        "Xin lỗi, hệ thống đang bận. Vui lòng thử lại sau!"
+        `Bạn vui lòng cung cấp thêm ${missing.join(
+          ", "
+        )} để bên mình hỗ trợ tốt nhất nhé.`
+      );
+    } else {
+      sendMessage(
+        sender_psid,
+        `Bạn có thể đặt lịch trực tiếp với cố vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1. Cảm ơn bạn đã liên hệ với Bùi Immigration! 🙏`
       );
     }
-  });
+  } else {
+    sendMessage(
+      sender_psid,
+      `Cảm ơn bạn đã cung cấp đầy đủ thông tin! Bạn có thể đặt lịch tư vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1 ✨`
+    );
+  }
 }
 
 const PORT = process.env.PORT || 3000;
