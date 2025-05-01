@@ -1,8 +1,7 @@
-// enhanced_chatbot_memory.js
-
 const express = require("express");
 const bodyParser = require("body-parser");
 const request = require("request");
+const axios = require("axios");
 
 const app = express();
 app.use(bodyParser.json());
@@ -75,7 +74,8 @@ function extractAndStoreInfo(sender_psid, message) {
       name: null,
       phone: null,
       email: null,
-      issue: null,
+      attempts: 0,
+      greeted: false,
     };
   }
   const session = sessions[sender_psid];
@@ -87,68 +87,82 @@ function extractAndStoreInfo(sender_psid, message) {
   if (!session.email && emailMatch) session.email = emailMatch[0];
   if (!session.phone && phoneMatch) session.phone = phoneMatch[0];
   if (!session.name && nameMatch) session.name = nameMatch[1];
-  if (!session.issue && message.length > 15) session.issue = message;
 
   return session;
 }
 
-function buildPrompt(session, userMessage) {
+async function handleUserMessage(sender_psid, userMessage) {
+  const session = extractAndStoreInfo(sender_psid, userMessage);
+
+  // First message: Check if it's a greeting using GPT
+  if (!session.greeted) {
+    try {
+      const response = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content:
+                "Is the following message just a greeting? Reply only 'yes' or 'no'.",
+            },
+            { role: "user", content: userMessage },
+          ],
+          temperature: 0,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const isGreeting =
+        response.data.choices[0].message.content.trim().toLowerCase() === "yes";
+      session.greeted = true;
+
+      if (isGreeting) {
+        sendMessage(
+          sender_psid,
+          "Chào bạn! Rất vui được hỗ trợ bạn về di trú Canada. ✨"
+        );
+        return;
+      }
+    } catch (err) {
+      console.error("Greeting check failed:", err);
+    }
+  }
+
+  // Ask for missing contact info
   const missing = [];
-  if (!session.issue) missing.push("vấn đề di trú");
   if (!session.name) missing.push("họ tên");
   if (!session.phone) missing.push("số điện thoại");
   if (!session.email) missing.push("email");
 
-  const knownInfo = `Thông tin đã có:\n- Họ tên: ${
-    session.name || "(chưa có)"
-  }\n- SĐT: ${session.phone || "(chưa có)"}\n- Email: ${
-    session.email || "(chưa có)"
-  }\n- Vấn đề: ${session.issue || "(chưa rõ)"}`;
+  if (missing.length > 0) {
+    session.attempts += 1;
 
-  const instruction =
-    missing.length === 0
-      ? `Bạn đã có đầy đủ thông tin. Gửi link đặt lịch: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1`
-      : `Hãy hỏi phần còn thiếu: ${missing.join(
-          ", "
-        )} (không hỏi lại nếu đã có).`;
-
-  return `Bạn là trợ lý intake của công ty di trú Bùi Immigration. Không được lặp lại câu hỏi nếu đã có thông tin. Không đưa ra lời khuyên pháp lý.\n\n${knownInfo}\n\nKhách nhắn: "${userMessage}"\n\n${instruction}`;
-}
-
-function handleUserMessage(sender_psid, userMessage) {
-  const session = extractAndStoreInfo(sender_psid, userMessage);
-  const prompt = buildPrompt(session, userMessage);
-
-  const options = {
-    method: "POST",
-    uri: "https://api.openai.com/v1/chat/completions",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: {
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.5,
-    },
-    json: true,
-  };
-
-  request(options, (error, response, body) => {
-    if (!error && response.statusCode === 200) {
-      const reply = body.choices[0].message.content.trim();
-      sendMessage(sender_psid, reply);
-    } else {
-      console.error("OpenAI API Error", error || body);
+    if (session.attempts <= 2) {
       sendMessage(
         sender_psid,
-        "Xin lỗi, hệ thống đang bận. Vui lòng thử lại sau!"
+        `Bạn vui lòng cung cấp thêm ${missing.join(
+          ", "
+        )} để bên mình hỗ trợ tốt nhất nhé.`
+      );
+    } else {
+      sendMessage(
+        sender_psid,
+        `Bạn có thể đặt lịch trực tiếp với cố vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1. Cảm ơn bạn đã liên hệ với Bùi Immigration! 🙏`
       );
     }
-  });
+  } else {
+    sendMessage(
+      sender_psid,
+      `Cảm ơn bạn đã cung cấp đầy đủ thông tin! Bạn có thể đặt lịch tư vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1 ✨`
+    );
+  }
 }
 
 const PORT = process.env.PORT || 3000;
