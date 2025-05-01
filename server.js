@@ -89,7 +89,9 @@ function extractAndStoreInfo(sender_psid, message) {
 
   const emailMatch = message.match(/[\w._%+-]+@[\w.-]+\.[a-zA-Z]{2,}/);
   const phoneMatch = message.match(/\b\d{9,}\b/);
-  const nameMatch = normalized.match(/ten(?:\s+tôi|\s+em|\s+la)?\s+(.*?)\b/i);
+  const nameMatch = normalized.match(
+    /(?:ten(?:\s+toi|\s+em|\s+la)?|my name is|i am|i'm)\s+([\w\s]{2,40})/i
+  );
 
   if (!session.email && emailMatch) session.email = emailMatch[0];
   if (!session.phone && phoneMatch) session.phone = phoneMatch[0];
@@ -97,6 +99,7 @@ function extractAndStoreInfo(sender_psid, message) {
 
   return session;
 }
+
 
 async function handleUserMessage(sender_psid, userMessage) {
   const session = extractAndStoreInfo(sender_psid, userMessage);
