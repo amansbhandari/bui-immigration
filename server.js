@@ -72,6 +72,7 @@ function sendMessage(sender_psid, responseText) {
 function extractAndStoreInfo(sender_psid, message) {
   if (!sessions[sender_psid]) {
     sessions[sender_psid] = {
+      inactivityStage: 0,
       name: null,
       phone: null,
       email: null,
@@ -256,6 +257,6 @@ setInterval(() => {
   }
 }, 60000);
 
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
-
