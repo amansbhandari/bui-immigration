@@ -30,43 +30,43 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", (req, res) => {
-  const body = req.body;
-  if (body.object === "page") {
-    body.entry.forEach(function (entry) {
-      const webhook_event = entry.messaging[0];
-      const sender_psid = webhook_event.sender.id;
-      if (webhook_event.message && webhook_event.message.text) {
-        const userMessage = webhook_event.message.text;
-        handleUserMessage(sender_psid, userMessage);
-      }
-    });
-    res.status(200).send("EVENT_RECEIVED");
-  } else {
-    res.sendStatus(404);
-  }
+const body = req.body;
+if (body.object === "page") {
+  body.entry.forEach(function (entry) {
+    const webhook_event = entry.messaging[0];
+    const sender_psid = webhook_event.sender.id;
+    if (webhook_event.message && webhook_event.message.text) {
+      const userMessage = webhook_event.message.text;
+      handleUserMessage(sender_psid, userMessage);
+    }
+  });
+  res.status(200).send("EVENT_RECEIVED");
+} else {
+  res.sendStatus(404);
+}
 });
 
 function sendMessage(sender_psid, responseText) {
-  const request_body = {
-    recipient: { id: sender_psid },
-    message: { text: responseText },
-  };
+const request_body = {
+  recipient: { id: sender_psid },
+  message: { text: responseText },
+};
 
-  request(
-    {
-      uri: "https://graph.facebook.com/v12.0/me/messages",
-      qs: { access_token: PAGE_ACCESS_TOKEN },
-      method: "POST",
-      json: request_body,
-    },
-    (err) => {
-      if (err) {
-        console.error("Unable to send message:", err);
-      } else {
-        console.log("Message sent!");
-      }
+request(
+  {
+    uri: "https://graph.facebook.com/v12.0/me/messages",
+    qs: { access_token: PAGE_ACCESS_TOKEN },
+    method: "POST",
+    json: request_body,
+  },
+  (err) => {
+    if (err) {
+      console.error("Unable to send message:", err);
+    } else {
+      console.log("Message sent!");
     }
-  );
+  }
+);
 }
 
 function extractAndStoreInfo(sender_psid, message) {
@@ -107,11 +107,11 @@ function extractAndStoreInfo(sender_psid, message) {
 }
 
 async function handleUserMessage(sender_psid, userMessage) {
-if (userMessage.trim().toLowerCase() === "water!##") {
-  delete sessions[sender_psid];
-  sendMessage(sender_psid, "New conversation started");
-  return;
-}
+  if (userMessage.trim().toLowerCase() === "water!##") {
+    delete sessions[sender_psid];
+    sendMessage(sender_psid, "New conversation started");
+    return;
+  }
 
   const isFollowUpReply =
     sessions[sender_psid]?.inactivityPinged &&
@@ -150,12 +150,12 @@ if (userMessage.trim().toLowerCase() === "water!##") {
         if (isQuestion) {
           sendMessage(
             sender_psid,
-            "Cảm ơn bạn! Một cố vấn di trú sẽ liên hệ với bạn trong vòng 24 giờ, hoặc bạn có thể đặt lịch hẹn tại đây: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1"
+            " Cảm ơn anh chị đã để lại thông tin. Chuyên viên tư vấn di trú sẽ liên hệ trong vòng 24 giờ. Nếu muốn chủ động chọn thời gian, anh chị có thể đặt lịch hẹn trực tiếp tại đây: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1"
           );
         } else {
           sendMessage(
             sender_psid,
-            "Không sao cả! Nếu cần hỗ trợ gì trong tương lai, bạn cứ nhắn cho chúng tôi bất cứ lúc nào nhé! 💬"
+            "Không sao cả! Nếu cần hỗ trợ gì trong tương lai, anh chị cứ nhắn tin cho chúng tôi bất cứ lúc nào nhé! 💬"
           );
         }
       })
@@ -196,7 +196,7 @@ if (userMessage.trim().toLowerCase() === "water!##") {
       if (isGreeting) {
         sendMessage(
           sender_psid,
-          "Chào bạn! Rất vui được hỗ trợ bạn về di trú Canada. ✨"
+          "Chào anh chị! Cảm ơn anh chị đã liên hệ với Bùi Immigration. Chúng tôi rất vui có thể được hỗ trợ anh chị về các vấn đề liên quan tới di trú Canada. ✨"
         );
         return;
       }
@@ -216,51 +216,51 @@ if (userMessage.trim().toLowerCase() === "water!##") {
     if (session.attempts <= 2) {
       sendMessage(
         sender_psid,
-        `Bạn vui lòng cung cấp thêm ${missing.join(
+        `Anh chị vui lòng cung cấp thêm ${missing.join(
           ", "
-        )} để bên mình hỗ trợ tốt nhất nhé.`
+        )} để chúng tôi hỗ trợ tốt nhất nhé.`
       );
     } else {
       sendMessage(
         sender_psid,
-        `Bạn có thể đặt lịch trực tiếp với cố vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1. Cảm ơn bạn đã liên hệ với Bùi Immigration! 🙏`
+        `Anh chị có thể đặt lịch trực tiếp với cố vấn di trú của Bùi Immigration tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1. Cảm ơn anh chị đã liên hệ với chúng tôi! 🙏`
       );
     }
   } else {
     if (!session.linkSent) {
       sendMessage(
         sender_psid,
-        `Cảm ơn bạn đã cung cấp đầy đủ thông tin! Bạn có thể đặt lịch tư vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1 ✨`
+        `Cảm ơn anh chị đã cung cấp đầy đủ thông tin! Anh chị có thể đặt lịch tư vấn với cố vấn di trú tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1 ✨`
       );
       session.linkSent = true;
     } else {
       sendMessage(
         sender_psid,
-        "Cảm ơn bạn! Nếu bạn có thêm câu hỏi, vui lòng ghi chú lại để đội ngũ cố vấn sẽ giải đáp chi tiết trong buổi hẹn. Hẹn gặp bạn sớm! 🤝"
+        "Cảm ơn anh chị đã liên hệ! Nếu anh chị có thêm câu hỏi, đừng ngần ngại ghi chú lại - đội ngũ cố vấn của chúng tôi sẽ giải đáp kỹ lưỡng trong buổi hẹn sắp tới nhé. 🤝"
       );
     }
   }
 }
 
 setInterval(() => {
-  const now = new Date();
-  for (const psid in sessions) {
-    const session = sessions[psid];
-    const stage = session.inactivityStage;
-    if (
-      stage < inactivityIntervals.length &&
-      session.lastInteraction &&
-      now - session.lastInteraction > inactivityIntervals[stage] * 60 * 1000
-    ) {
-      sendMessage(
-        psid,
-        "Chúng tôi chỉ muốn kiểm tra lại rằng bạn đã được giải đáp đầy đủ chưa, và liệu còn điều gì chúng tôi có thể hỗ trợ thêm không? 😊"
-      );
-      session.inactivityStage += 1;
-      session.inactivityPinged = true;
-      session.followUpHandled = false;
-    }
+const now = new Date();
+for (const psid in sessions) {
+  const session = sessions[psid];
+  const stage = session.inactivityStage;
+  if (
+    stage < inactivityIntervals.length &&
+    session.lastInteraction &&
+    now - session.lastInteraction > inactivityIntervals[stage] * 60 * 1000
+  ) {
+    sendMessage(
+      psid,
+      "Xin chào, anh chị có khỏe không? Chúng tôi chỉ muốn kiểm tra lại rằng anh chị đã được giải đáp đầy đủ chưa, và liệu còn điều gì chúng tôi có thể hỗ trợ thêm không? 😊"
+    );
+    session.inactivityStage += 1;
+    session.inactivityPinged = true;
+    session.followUpHandled = false;
   }
+}
 }, 60000);
 
 
