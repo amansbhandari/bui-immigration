@@ -77,15 +77,18 @@ function extractAndStoreInfo(sender_psid, message) {
       attempts: 0,
       greeted: false,
       linkSent: false,
+      lastInteraction: new Date(),
+      inactivityPinged: false,
     };
   }
   const session = sessions[sender_psid];
+  session.lastInteraction = new Date();
+  session.inactivityPinged = false;
 
-  // Normalize Vietnamese input
   const normalized = message
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[^\p{L}\p{N}\s]/gu, "");
 
   const emailMatch = message.match(/[\w._%+-]+@[\w.-]+\.[a-zA-Z]{2,}/);
   const phoneMatch = message.match(/\b\d{9,}\b/);
@@ -100,11 +103,9 @@ function extractAndStoreInfo(sender_psid, message) {
   return session;
 }
 
-
 async function handleUserMessage(sender_psid, userMessage) {
   const session = extractAndStoreInfo(sender_psid, userMessage);
 
-  // First message: Check if it's a greeting using GPT
   if (!session.greeted) {
     try {
       const response = await axios.post(
@@ -145,7 +146,6 @@ async function handleUserMessage(sender_psid, userMessage) {
     }
   }
 
-  // Ask for missing contact info
   const missing = [];
   if (!session.name) missing.push("họ tên");
   if (!session.phone) missing.push("số điện thoại");
@@ -183,6 +183,23 @@ async function handleUserMessage(sender_psid, userMessage) {
   }
 }
 
+setInterval(() => {
+  const now = new Date();
+  for (const psid in sessions) {
+    const session = sessions[psid];
+    if (
+      !session.inactivityPinged &&
+      session.lastInteraction &&
+      now - session.lastInteraction > 2 * 60 * 1000 // 2 minutes
+    ) {
+      sendMessage(
+        psid,
+        "Chúng tôi chỉ muốn kiểm tra lại rằng bạn đã được giải đáp đầy đủ chưa, và liệu còn điều gì chúng tôi có thể hỗ trợ thêm không? 😊"
+      );
+      session.inactivityPinged = true;
+    }
+  }
+}, 60000); // Check every 1 minute
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
-
