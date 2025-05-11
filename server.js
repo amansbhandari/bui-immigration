@@ -10,7 +10,7 @@ const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
 const sessions = {}; // session memory by sender_psid
-const inactivityIntervals = [2, 4, 6];
+const inactivityIntervals = [21600, 43200, 86400];
 
 app.get("/", (req, res) => {
   res.send("Bui Immigration Chatbot Running on Heroku!");
