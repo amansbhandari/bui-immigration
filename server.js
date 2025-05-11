@@ -196,8 +196,7 @@ async function handleUserMessage(sender_psid, userMessage) {
       if (isGreeting) {
         sendMessage(
           sender_psid,
-          "Chào anh/chị ạ, cảm ơn anh/chị đã liên hệ với Bùi Immigration - Công ty Di Trú được Chính phủ Canada cấp phép "
-Bùi Immigration rất hân hạnh được đồng hành cùng anh/chị trong hành trình du học, lao động, định cư, đầu tư tại Canada. Anh/chị vui lòng cung cấp họ tên, email và số điện thoại để Bùi Immigration có thể hỗ trợ anh/chị nhanh chóng và hiệu quả nhất nhé ✨"
+          "Chào anh/chị ạ, cảm ơn anh/chị đã liên hệ với Bùi Immigration - Công ty Di Trú được Chính phủ Canada cấp phép. Bùi Immigration rất hân hạnh được đồng hành cùng anh/chị trong hành trình du học, lao động, định cư, đầu tư tại Canada. Anh/chị vui lòng cung cấp họ tên, email và số điện thoại để Bùi Immigration có thể hỗ trợ anh/chị nhanh chóng và hiệu quả nhất nhé ✨"
         );
         return;
       }
