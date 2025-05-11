@@ -213,7 +213,7 @@ async function handleUserMessage(sender_psid, userMessage) {
   if (missing.length > 0) {
     session.attempts += 1;
 
-    if (session.attempts <= 2) {
+    if (session.attempts <= 1) {
       sendMessage(
         sender_psid,
         `Anh chị vui lòng cung cấp thêm ${missing.join(
