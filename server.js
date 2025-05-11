@@ -107,6 +107,12 @@ function extractAndStoreInfo(sender_psid, message) {
 }
 
 async function handleUserMessage(sender_psid, userMessage) {
+  if (userMessage.trim().toLowerCase() === "water!##") {
+    delete sessions[sender_psid];
+    sendMessage(sender_psid, "New conversation started");
+    return;
+  }
+  
   const isFollowUpReply =
     sessions[sender_psid]?.inactivityPinged &&
     !sessions[sender_psid]?.followUpHandled;
