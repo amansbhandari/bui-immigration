@@ -30,43 +30,43 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", (req, res) => {
-  const body = req.body;
-  if (body.object === "page") {
-    body.entry.forEach(function (entry) {
-      const webhook_event = entry.messaging[0];
-      const sender_psid = webhook_event.sender.id;
-      if (webhook_event.message && webhook_event.message.text) {
-        const userMessage = webhook_event.message.text;
-        handleUserMessage(sender_psid, userMessage);
-      }
-    });
-    res.status(200).send("EVENT_RECEIVED");
-  } else {
-    res.sendStatus(404);
-  }
+const body = req.body;
+if (body.object === "page") {
+  body.entry.forEach(function (entry) {
+    const webhook_event = entry.messaging[0];
+    const sender_psid = webhook_event.sender.id;
+    if (webhook_event.message && webhook_event.message.text) {
+      const userMessage = webhook_event.message.text;
+      handleUserMessage(sender_psid, userMessage);
+    }
+  });
+  res.status(200).send("EVENT_RECEIVED");
+} else {
+  res.sendStatus(404);
+}
 });
 
 function sendMessage(sender_psid, responseText) {
-  const request_body = {
-    recipient: { id: sender_psid },
-    message: { text: responseText },
-  };
+const request_body = {
+  recipient: { id: sender_psid },
+  message: { text: responseText },
+};
 
-  request(
-    {
-      uri: "https://graph.facebook.com/v12.0/me/messages",
-      qs: { access_token: PAGE_ACCESS_TOKEN },
-      method: "POST",
-      json: request_body,
-    },
-    (err) => {
-      if (err) {
-        console.error("Unable to send message:", err);
-      } else {
-        console.log("Message sent!");
-      }
+request(
+  {
+    uri: "https://graph.facebook.com/v12.0/me/messages",
+    qs: { access_token: PAGE_ACCESS_TOKEN },
+    method: "POST",
+    json: request_body,
+  },
+  (err) => {
+    if (err) {
+      console.error("Unable to send message:", err);
+    } else {
+      console.log("Message sent!");
     }
-  );
+  }
+);
 }
 
 function extractAndStoreInfo(sender_psid, message) {
@@ -107,6 +107,12 @@ function extractAndStoreInfo(sender_psid, message) {
 }
 
 async function handleUserMessage(sender_psid, userMessage) {
+  if (userMessage.trim().toLowerCase() === "water!##") {
+    delete sessions[sender_psid];
+    sendMessage(sender_psid, "New conversation started");
+    return;
+  }
+
   const isFollowUpReply =
     sessions[sender_psid]?.inactivityPinged &&
     !sessions[sender_psid]?.followUpHandled;
@@ -144,12 +150,12 @@ async function handleUserMessage(sender_psid, userMessage) {
         if (isQuestion) {
           sendMessage(
             sender_psid,
-            "Cảm ơn anh/chị đã cung cấp đầy đủ thông tin ! Anh/chị có thể đặt lịch tư vấn trực tiếp miễn phí với cố vấn di trú của chúng tôi tại đây: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1"
+            " Cảm ơn anh chị đã để lại thông tin. Chuyên viên tư vấn di trú sẽ liên hệ trong vòng 24 giờ. Nếu muốn chủ động chọn thời gian, anh chị có thể đặt lịch hẹn trực tiếp tại đây: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1"
           );
         } else {
           sendMessage(
             sender_psid,
-            "Không sao cả! Nếu cần hỗ trợ gì trong tương lai, anh chị cứ nhắn cho chúng tôi bất cứ lúc nào nhé! 💬"
+            "Không sao cả! Nếu cần hỗ trợ gì trong tương lai, anh chị cứ nhắn tin cho chúng tôi bất cứ lúc nào nhé! 💬"
           );
         }
       })
@@ -190,7 +196,7 @@ async function handleUserMessage(sender_psid, userMessage) {
       if (isGreeting) {
         sendMessage(
           sender_psid,
-          "Dạ chào anh/chị ạ, cảm ơn anh/chị đã liên hệ với Bùi Immigration - Công ty Di Trú được Chính phủ Canada cấp phép. Bùi Immigration rất hân hạnh được đồng hành cùng anh/chị trong hành trình định cư tại Canada. Anh/chị vui lòng cung cấp họ tên, email và số điện thoại để Bùi Immigration có thể hỗ trợ anh/chị nhanh chóng và hiệu quả nhất nhé"
+          "Chào anh chị! Cảm ơn anh chị đã liên hệ với Bùi Immigration. Chúng tôi rất vui có thể được hỗ trợ anh chị về các vấn đề liên quan tới di trú Canada. ✨"
         );
         return;
       }
@@ -217,47 +223,46 @@ async function handleUserMessage(sender_psid, userMessage) {
     } else {
       sendMessage(
         sender_psid,
-        `Anh chị có thể đặt lịch trực tiếp với cố vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1. Cảm ơn anh chị đã liên hệ với Bùi Immigration! 🙏`
+        `Anh chị có thể đặt lịch trực tiếp với cố vấn di trú của Bùi Immigration tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1. Cảm ơn anh chị đã liên hệ với chúng tôi! 🙏`
       );
     }
   } else {
     if (!session.linkSent) {
       sendMessage(
         sender_psid,
-        `Cảm ơn anh chị đã cung cấp đầy đủ thông tin! Bạn có thể đặt lịch tư vấn tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1 ✨`
+        `Cảm ơn anh chị đã cung cấp đầy đủ thông tin! Anh chị có thể đặt lịch tư vấn với cố vấn di trú tại đây nhé: https://buiimmigration.cliogrow.com/book/c08b4f6695426b42696bd44c859643a1 ✨`
       );
       session.linkSent = true;
     } else {
       sendMessage(
         sender_psid,
-        "Cảm ơn anh chị! Nếu anh chị có thêm câu hỏi, vui lòng ghi chú lại để đội ngũ cố vấn sẽ giải đáp chi tiết trong buổi hẹn. Hẹn gặp anh chị sớm! 🤝"
+        "Cảm ơn anh chị đã liên hệ! Nếu anh chị có thêm câu hỏi, đừng ngần ngại ghi chú lại - đội ngũ cố vấn của chúng tôi sẽ giải đáp kỹ lưỡng trong buổi hẹn sắp tới nhé. 🤝"
       );
     }
   }
 }
 
 setInterval(() => {
-  const now = new Date();
-  for (const psid in sessions) {
-    const session = sessions[psid];
-    const stage = session.inactivityStage;
-    if (
-      stage < inactivityIntervals.length &&
-      session.lastInteraction &&
-      now - session.lastInteraction > inactivityIntervals[stage] * 60 * 1000
-    ) {
-      const messagesByStage = [
-        "Dạ chào anh/chị. Không biết anh/chị đã được giải đáp đầy đủ vấn đề di trú của mình chưa? Nếu có câu hỏi gì anh/chị đừng ngại liên hệ lại với công ty nhé ạ",
-        "Dạ chào anh/chị, lại là Bùi Immigration đây ạ. Chúng tôi chỉ muốn kiểm tra lại  xem liệu anh/chị còn có vướng mắc gì để công ty hỗ trợ  thêm  cho anh/chị không?  Bùi Immigration luôn sẵn sàng đồng hành cùng anh/chị trong hành trình Học tập, Sinh sống, Làm việc tại Canada. Chúng tôi cam kết hỗ trợ xuyên suốt, từ bước đầu nộp hồ sơ đến hậu định cư, và không ai bị bỏ lại phía sau. Nếu anh/chị cần thêm thông tin gì vê Công ty thì hãy cho chúng tôi được biết nhé !",
-        "Hello anh/chị, lại là Bùi Immigration đây ạ. Đã trôi qua một thời gian không thấy sự phản hồi từ phía anh/chị. Chúng tôi chỉ muốn kiểm tra lại  xem liệu anh/chị còn có câu hỏi gì cho Công ty, hay có vướng mắc gì  không?  Dù hành trình ở Canada có khó khăn, Bùi Immigration luôn bên cạnh anh/chị  từ giai đoạn bắt đầu hồ sơ cho đến cả khi đã đặt chân tới đây & gặp vướng mắc về di trú tại Canada . Chúng tôi không chỉ làm hồ sơ, mà còn là đơn vị đồng hành cùng anh/chị khi cần nhất. Luật di trú có thể thay đổi theo thời điểm, vì vậy việc chủ động chuẩn bị sớm sẽ giúp anh/chị nắm bắt cơ hội tốt hơn và giảm thiểu rủi ro không đáng có! Bùi Immigration rất mong được đồng hành cùng anh/chị không chỉ trong quá trình chuẩn bị hồ sơ di trú đến Canada, mà cả khi anh/chị đã đặt chân tới đây, nơi nhiều thay đổi về luật và chính sách vẫn cần được theo sát. Khác với nhiều đơn vị chỉ hỗ trợ giai đoạn đầu, chúng tôi cam kết đi cùng anh/chị lâu dài.",
-      ];
-      sendMessage(psid, messagesByStage[stage]);
-      session.inactivityStage += 1;
-      session.inactivityPinged = true;
-      session.followUpHandled = false;
-    }
+const now = new Date();
+for (const psid in sessions) {
+  const session = sessions[psid];
+  const stage = session.inactivityStage;
+  if (
+    stage < inactivityIntervals.length &&
+    session.lastInteraction &&
+    now - session.lastInteraction > inactivityIntervals[stage] * 60 * 1000
+  ) {
+    sendMessage(
+      psid,
+      "Xin chào, anh chị có khỏe không? Chúng tôi chỉ muốn kiểm tra lại rằng anh chị đã được giải đáp đầy đủ chưa, và liệu còn điều gì chúng tôi có thể hỗ trợ thêm không? 😊"
+    );
+    session.inactivityStage += 1;
+    session.inactivityPinged = true;
+    session.followUpHandled = false;
   }
+}
 }, 60000);
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
