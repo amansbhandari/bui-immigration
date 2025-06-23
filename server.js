@@ -8,7 +8,7 @@ app.use(bodyParser.json());
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
 // === CONFIGURABLE VARIABLES ===
-const INACTIVITY_THRESHOLD_MINUTES = 2 * 24 * 60; // 2 days
+const INACTIVITY_THRESHOLD_MINUTES = 2;// * 24 * 60; // 2 days
 const INACTIVITY_MESSAGE = `Dạ chào anh/chị, lại là Bùi Immigration đây ạ. Chúng tôi chỉ muốn kiểm tra lại xem liệu anh/chị còn có vướng mắc gì về di trú Canada để công ty hỗ trợ  thêm  cho anh/chị không?  Bùi Immigration luôn sẵn sàng đồng hành cùng anh/chị trong hành trình Học tập, Sinh sống, Làm việc tại Canada. Chúng tôi cam kết hỗ trợ xuyên suốt, từ bước đầu nộp hồ sơ đến hậu định cư, và không ai bị bỏ lại phía sau. Nếu anh/chị cần hỗ trợ vấn đề gì thì hãy cho chúng tôi được biết nhé 😊`;
 
 const sessions = {};
