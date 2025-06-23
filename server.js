@@ -8,7 +8,7 @@ app.use(bodyParser.json());
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 
 // === GLOBAL CONFIGURATION === //
-const FOLLOW_UP_SCHEDULE_MINUTES = [1, 2]; // [15 days, 45 days] in minutes
+const FOLLOW_UP_SCHEDULE_MINUTES = [15 * 24 * 60, 45 * 24 * 60]; // [15 days, 45 days] in minutes
 const FOLLOW_UP_MESSAGES = [
   `Dạ em chào anh/chị. Không biết anh/chị đã được giải đáp đầy đủ vấn đề di trú của mình chưa? Nếu có câu hỏi gì anh/chị đừng ngại liên hệ lại với công ty nhé`,
   `Dạ chào anh/chị, lại là Bùi Immigration đây ạ. Chúng tôi chỉ muốn kiểm tra lại xem liệu anh/chị còn có vướng mắc gì về di trú Canada để công ty hỗ trợ  thêm  cho anh/chị không?  Bùi Immigration luôn sẵn sàng đồng hành cùng anh/chị trong hành trình Học tập, Sinh sống, Làm việc tại Canada. Chúng tôi cam kết hỗ trợ xuyên suốt, từ bước đầu nộp hồ sơ đến hậu định cư, và không ai bị bỏ lại phía sau. Nếu anh/chị cần hỗ trợ vấn đề gì thì hãy cho chúng tôi được biết nhé 😊`,
